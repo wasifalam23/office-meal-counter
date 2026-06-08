@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 const TOTAL_MEALS = 26;
@@ -50,6 +50,7 @@ function formatDate(dateKey: string) {
 export default function Home() {
   const today = getLocalDateKey();
   const [logs, setLogs] = useState<MealLog[]>([]);
+  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [mealsLoading, setMealsLoading] = useState(false);
@@ -62,22 +63,29 @@ export default function Home() {
   useEffect(() => {
     let ignore = false;
 
-    async function loadUser() {
+    async function loadSession() {
       const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
+        data: { session: currentSession },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
       if (!ignore) {
-        setUser(currentUser);
+        if (sessionError) {
+          setError(sessionError.message);
+        }
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         setAuthLoading(false);
       }
     }
 
-    void loadUser();
+    void loadSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       setUser(session?.user ?? null);
       setAuthLoading(false);
     });
@@ -418,22 +426,25 @@ export default function Home() {
                 </button>
               </>
             ) : (
-              <form className="mt-5 flex flex-col gap-3" onSubmit={signIn}>
-                <input
-                  className="rounded-md border border-[#cfc6b7] bg-white px-3 py-3 text-base outline-none transition focus:border-[#25765a] focus:ring-2 focus:ring-[#25765a]/20"
-                  placeholder="you@example.com"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-                <button
-                  className="rounded-md border border-[#25765a] px-5 py-3 text-sm font-bold text-[#1d6049] transition hover:bg-[#eaf3ef] disabled:cursor-not-allowed disabled:border-[#cfc6b7] disabled:text-[#9d968a]"
-                  disabled={authLoading || busy || !email.trim()}
-                  type="submit"
-                >
-                  Send sign-in link
-                </button>
-              </form>
+              !authLoading &&
+              !session && (
+                <form className="mt-5 flex flex-col gap-3" onSubmit={signIn}>
+                  <input
+                    className="rounded-md border border-[#cfc6b7] bg-white px-3 py-3 text-base outline-none transition focus:border-[#25765a] focus:ring-2 focus:ring-[#25765a]/20"
+                    placeholder="you@example.com"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                  <button
+                    className="rounded-md border border-[#25765a] px-5 py-3 text-sm font-bold text-[#1d6049] transition hover:bg-[#eaf3ef] disabled:cursor-not-allowed disabled:border-[#cfc6b7] disabled:text-[#9d968a]"
+                    disabled={authLoading || busy || !email.trim()}
+                    type="submit"
+                  >
+                    Send sign-in link
+                  </button>
+                </form>
+              )
             )}
           </section>
         </div>
