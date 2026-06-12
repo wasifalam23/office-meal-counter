@@ -27,6 +27,7 @@ export function MealCounterApp() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [selectedDate, setSelectedDate] = useState(today);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mealToRemove, setMealToRemove] = useState<MealLog | null>(null);
 
@@ -157,6 +158,8 @@ export function MealCounterApp() {
 
     if (signOutError) {
       setError(signOutError.message);
+    } else {
+      setShowSignOutConfirm(false);
     }
 
     setBusy(false);
@@ -258,7 +261,7 @@ export function MealCounterApp() {
           busy={busy}
           totalMeals={TOTAL_MEALS}
           userSignedIn={Boolean(user)}
-          onSignOut={() => void signOut()}
+          onSignOut={() => setShowSignOutConfirm(true)}
         />
 
         <StatusMessage error={error} message={message} />
@@ -306,6 +309,24 @@ export function MealCounterApp() {
           onRequestRemoveMeal={setMealToRemove}
         />
       </section>
+
+      {showSignOutConfirm ? (
+        <ConfirmationModal
+          cancelLabel="Stay signed in"
+          confirmLabel="Yes, sign out"
+          confirmTitle="Sign out?"
+          disabled={busy}
+          message={
+            <p>
+              You will need to use your email sign-in link again before adding
+              or editing meals.
+            </p>
+          }
+          titleId="sign-out-title"
+          onCancel={() => setShowSignOutConfirm(false)}
+          onConfirm={() => void signOut()}
+        />
+      ) : null}
 
       {showResetConfirm ? (
         <ConfirmationModal
